@@ -1,4 +1,5 @@
 import { pgTable, integer, varchar, timestamp } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 
 const timestamps = {
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -18,5 +19,22 @@ export const subjects = pgTable('subjects', {
     code: varchar('code', { length: 50 }).notNull().unique(),
     name: varchar('name', { length: 300 }).notNull(),
     description: varchar('description', { length: 400 }),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
     ...timestamps
 })
+
+
+export const departmentRelations = relations(departments, ({ many }) => ({ subjects: many(subjects) }))
+
+export const subjectRelations = relations(subjects, ({ one, many }) => ({
+    department: one(departments, {
+        fields: [subjects.departmentId],
+        references: [departments.id]
+    })
+}))
+
+export type Department = typeof departments.$inferSelect
+export type NewDepartment = typeof departments.$inferInsert
+
+export type Subject = typeof subjects.$inferSelect
+export type NewSubject = typeof subjects.$inferInsert
