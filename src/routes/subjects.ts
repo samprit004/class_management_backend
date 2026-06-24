@@ -8,14 +8,14 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
     try {
-        const { search, department, page = 1, limit = 10 } = req.query;
+        const { search, department, departmentId, page = 1, limit = 10 } = req.query;
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1)
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100)
 
         const offset = (currentPage - 1) * limitPerPage
 
         const filterCondition = [];
-        // if search query exists, filter by subject name or subject code
+
         if (search) {
             filterCondition.push(
                 or(
@@ -25,14 +25,12 @@ router.get('/', async (req, res) => {
             )
         }
 
-        // if department filter exists, match department name
-        if (department) {
-            filterCondition.push(
-                ilike(departments.name, `%${department}%`)
-            )
+        if (departmentId) {
+            filterCondition.push(eq(subjects.departmentId, Number(departmentId)))
+        } else if (department) {
+            filterCondition.push(ilike(departments.name, `%${department}%`))
         }
 
-        // combine all filters using AND if any exists
         const whereClause = filterCondition.length > 0 ? and(...filterCondition) : undefined;
 
         const countResult = await db
@@ -41,7 +39,7 @@ router.get('/', async (req, res) => {
             .leftJoin(departments, eq(subjects.departmentId, departments.id))
             .where(whereClause)
 
-        const totalCount = countResult[0]?.count ?? 0;
+        const total = countResult[0]?.count ?? 0;
 
         const subjectsList = await db.select({
             ...getTableColumns(subjects),
@@ -57,11 +55,10 @@ router.get('/', async (req, res) => {
         res.status(200).json({
             data: subjectsList,
             pagination: {
-                totalCount,
-                totalPages: Math.ceil(totalCount / limitPerPage),
-                currentPage,
-                limitPerPage
-
+                page: currentPage,
+                limit: limitPerPage,
+                total,
+                totalPages: Math.ceil(total / limitPerPage),
             }
         })
 
@@ -72,6 +69,21 @@ router.get('/', async (req, res) => {
 
     }
 })
+
+router.post("/", async (req, res) => {
+    try {
+        const [created] = await db
+            .insert(subjects)
+            .values({ ...req.body, departmentId: Number(req.body.departmentId) })
+            .returning();
+
+        if (!created) throw new Error("Failed to create subject");
+        res.status(201).json({ data: created });
+    } catch (e) {
+        console.error(`POST /subjects error: ${e}`);
+        res.status(500).json({ error: "Failed to create subject" });
+    }
+});
 
 export default router;
 
