@@ -5,6 +5,7 @@ import ClassesRouter from "./routes/classes";
 import UsersRouter from "./routes/users";
 import DepartmentsRouter from "./routes/department";
 import StatsRouter from "./routes/stats";
+import EnrollmentsRouter from "./routes/enrollments";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 
@@ -32,6 +33,7 @@ app.use('/api/departments', DepartmentsRouter)
 app.use('/api/subjects', Subjectsrouter)
 app.use('/api/classes', ClassesRouter)
 app.use('/api/users', UsersRouter)
+app.use('/api/enrollments', EnrollmentsRouter)
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
